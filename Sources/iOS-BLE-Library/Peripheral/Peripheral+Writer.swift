@@ -49,6 +49,18 @@ extension Peripheral {
 			super.init(peripheral: peripheral)
 		}
 	}
+    
+    class DescriptorReader: OperationQueue {
+        let updateEventPublisher: AnyPublisher<(CBDescriptor, Error?), Never>
+        
+        init(
+            updateEventPublisher: AnyPublisher<(CBDescriptor, Error?), Never>,
+            peripheral: CBPeripheral
+        ) {
+            self.updateEventPublisher = updateEventPublisher
+            super.init(peripheral: peripheral)
+        }
+    }
 }
 
 extension Peripheral.CharacteristicWriter {
@@ -77,6 +89,20 @@ extension Peripheral.CharacteristicReader {
 
 		return operation.future
 	}
+}
+
+extension Peripheral.DescriptorReader {
+    func readValue(from descriptor: CBDescriptor) -> Future<Any?, Error> {
+        let operation = ReadDescriptorOperation(
+            updateEventPublisher: updateEventPublisher,
+            descriptor: descriptor,
+            peripheral: peripheral
+        )
+        
+        queue.addOperation(operation)
+        
+        return operation.future
+    }
 }
 
 private class BasicOperation<T>: Operation {
@@ -229,4 +255,51 @@ private class ReadCharacteristicOperation: BasicOperation<Data?> {
 		main()
 	}
 
+}
+
+private class ReadDescriptorOperation: BasicOperation<Any?> {
+    let updateEventPublisher: AnyPublisher<(CBDescriptor, Error?), Never>
+    let descriptor: CBDescriptor
+    
+    init(
+        updateEventPublisher: AnyPublisher<(CBDescriptor, Error?), Never>,
+        descriptor: CBDescriptor, peripheral: CBPeripheral
+    ) {
+        self.updateEventPublisher = updateEventPublisher
+        self.descriptor = descriptor
+        super.init(peripheral: peripheral)
+    }
+    
+    override func main() {
+        peripheral.readValue(for: descriptor)
+    }
+    
+    override func start() {
+        if isCancelled {
+            state = .finished
+            return
+        }
+        
+        self.cancelable = updateEventPublisher.share()
+            .filter { $0.0.uuid == self.descriptor.uuid }
+            .first()
+            .tryMap { v in
+                if let e = v.1 {
+                    throw e
+                } else {
+                    return v.0.value
+                }
+            }
+            .sink { [unowned self] completion in
+                if case .failure(let e) = completion {
+                    self.promise?(.failure(e))
+                }
+                self.state = .finished
+            } receiveValue: { v in
+                self.promise?(.success(v))
+            }
+        
+        state = .executing
+        main()
+    }
 }

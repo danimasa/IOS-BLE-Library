@@ -111,6 +111,12 @@ public class Peripheral {
 			.eraseToAnyPublisher(),
 		peripheral: peripheral
 	)
+    
+    private lazy var descReader = DescriptorReader(
+        updateEventPublisher: self.peripheralDelegate.updatedDescriptorValuesSubject
+            .eraseToAnyPublisher(),
+        peripheral: peripheral
+    )
 
 	// TODO: Why don't we use default delegate?
 	/// Initializes a Peripheral instance.
@@ -300,8 +306,8 @@ extension Peripheral {
     ///
     /// - Parameter descriptor: The descriptor to read from.
     /// - Returns: A future emitting the read data or an error.
-    public func readValue(for descriptor: CBDescriptor) -> Future<Data, Error> {
-        fatalError()
+    public func readValue(for descriptor: CBDescriptor) -> Future<Any?, Error> {
+        return descReader.readValue(from: descriptor)
     }
 }
 
