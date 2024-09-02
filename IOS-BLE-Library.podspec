@@ -1,7 +1,7 @@
 Pod::Spec.new do |s|
-    s.name             = 'IOS-BLE-Library'
+    s.name             = 'iOS-BLE-Library'
     s.swift_version    = '5.0'
-    s.version          = '0.3.3' 
+    s.version          = '0.3.4' 
     s.summary          = 'Extension for standard CoreBluetooth framework that is based on Combine and brings Reactive Approach.'
     s.homepage         = 'https://github.com/danimasa/IOS-BLE-Library'
     s.license          = { :type => 'BSD-3-Clause', :file => 'LICENSE' }
