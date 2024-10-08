@@ -261,7 +261,8 @@ extension CentralManager {
 				return e
 			}
 			.bluetooth {
-				self.centralManager.scanForPeripherals(withServices: services)
+        let options = [CBCentralManagerScanOptionAllowDuplicatesKey: true]
+        self.centralManager.scanForPeripherals(withServices: services, options: options)
 			}
             .autoconnect()
             .eraseToAnyPublisher()
